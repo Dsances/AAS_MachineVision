@@ -1,0 +1,30 @@
+% Load MNIST dataset
+trainImages = load('train-images-idx3-ubyte');
+trainLabels = load('train-labels-idx1-ubyte');
+testImages = load('t10k-images-idx3-ubyte');
+testLabels = load('t10k-labels-idx1-ubyte');
+
+% Preprocess images
+trainImages = trainImages.'; % Transpose to convert from column-major to row-major
+trainImages = reshape(trainImages, [28, 28, 1, numel(trainImages)]);
+trainImages = double(trainImages) ./ 255; % Scale pixel values to [0, 1]
+testImages = testImages.';
+testImages = reshape(testImages, [28, 28, 1, numel(testImages)]);
+testImages = double(testImages) ./ 255;
+
+% Extract HOG features
+hogTrainFeatures = extractHOGFeatures(trainImages, 'CellSize', [8 8], 'BlockSize', [16 16], 'BlockStride', [8 8]);
+hogTestFeatures = extractHOGFeatures(testImages, 'CellSize', [8 8], 'BlockSize', [16 16], 'BlockStride', [8 8]);
+
+% Train SVM classifier
+svmModel = fitcecoc(hogTrainFeatures, trainLabels);
+
+% Classify test images
+predictedLabels = predict(svmModel, hogTestFeatures);
+
+% Display confusion matrix, accuracy, and precision
+confusionmat(testLabels, predictedLabels)
+accuracy = sum(testLabels == predictedLabels) / numel(testLabels);
+precision = sum(diag(confusionmat(testLabels, predictedLabels))) / sum(testLabels);
+fprintf('Accuracy: %f\n', accuracy);
+fprintf('Precision: %f\n', precision);
